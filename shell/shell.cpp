@@ -8,13 +8,13 @@ namespace fs = std::filesystem;
         return;
     }
 
-    // show the current working dir
+    // Shows the current working directory
     void pwd(fs::path currentPath){
         std::cout << currentPath.string();
         return;
     }
 
-    // lists directory's content
+    // Lists directory's content
     void ls(fs::path currentPath){
         int counter = 0;
         for (const auto & entry : fs::directory_iterator(currentPath)){
@@ -25,7 +25,7 @@ namespace fs = std::filesystem;
         return;
     }
 
-    // changes working directory
+    // Changes working directory
     fs::path cd(std::string directoryName, fs::path currentPath) {
         if(directoryName == "..")
             currentPath = currentPath.parent_path();
@@ -50,6 +50,7 @@ namespace fs = std::filesystem;
         return false;
     }
 
+    // Creates new directory
     void mkdir(std::string dirName, fs::path currentPath){
         fs::path temp = currentPath;
         if(nameInUse(dirName, currentPath))
@@ -60,6 +61,7 @@ namespace fs = std::filesystem;
         return;
     }
 
+    // Removes directory or file
     void rm(std::string name, fs::path currPath, bool isFile){
         if(fs::exists(currPath.append(name))){
             uintmax_t n{fs::remove_all(currPath)};
@@ -103,6 +105,7 @@ namespace fs = std::filesystem;
         return;
     }
 
+    // Moves file or directory 
     void mv(std::string fileName, fs::path currPath){
         std::string secondInput;
         std::cin >> secondInput;
@@ -163,7 +166,6 @@ namespace fs = std::filesystem;
             }
             else if(input == "cp"){
                 std::string secondInput;
-                // std::string destination;
                 std::cin >> input >> secondInput;
                 copy(input, secondInput, currentPath, currentPath);
             }
