@@ -158,8 +158,8 @@ CMakeFiles/glad.dir/clean:
 # Target rules for target CMakeFiles/OpenGLCube.dir
 
 # All Build rule for target.
-CMakeFiles/OpenGLCube.dir/all: libs/glfw-3.4/src/CMakeFiles/glfw.dir/all
 CMakeFiles/OpenGLCube.dir/all: CMakeFiles/glad.dir/all
+CMakeFiles/OpenGLCube.dir/all: libs/glfw-3.4/src/CMakeFiles/glfw.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/OpenGLCube.dir/build.make CMakeFiles/OpenGLCube.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/OpenGLCube.dir/build.make CMakeFiles/OpenGLCube.dir/build
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/c/Users/norah/Documents/personal_projects/3d_cube/build/CMakeFiles --progress-num=1,2 "Built target OpenGLCube"
