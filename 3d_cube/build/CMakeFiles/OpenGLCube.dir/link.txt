@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/OpenGLCube.dir/src/main.cpp.o -o OpenGLCube  libglad.a libs/glfw-3.4/src/libglfw3.a -ldl /usr/lib/x86_64-linux-gnu/librt.a -lm -ldl 
