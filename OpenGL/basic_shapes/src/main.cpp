@@ -14,9 +14,9 @@ unsigned int createFragmentShader();
 // Create and activate shader program object.
 unsigned int activateShaderProgram(unsigned int vertexShader, unsigned int fragmentShader);
 // Prepare buffers for triangle.
-void triangle_setup(unsigned int VAO, unsigned int VBO);
+void triangle_setup(unsigned int *VAO, unsigned int *VBO);
 // Prepare buffers for rectangle.
-void rectangle_setup(unsigned int VAO, unsigned int VBO, unsigned int EBO);
+void rectangle_setup(unsigned int *VAO, unsigned int *VBO, unsigned int *EBO);
 
 
 
@@ -40,7 +40,6 @@ const char *fragmentShaderSource = "#version 330 core\n"
 
 
 int main() {
-
 // ---------------------------GENERAL SET UP-----------------------------------------------
     glfwInit();
     // Means we are using GLFW 3.3
@@ -57,6 +56,7 @@ int main() {
         return -1;
     }
     glfwMakeContextCurrent(window);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     
     // Initialize GLAD (manages function pointers for OpenGL).
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
@@ -64,10 +64,6 @@ int main() {
         return -1;
     }
     
-    // Sets rendering window's size.
-    glViewport(0, 0, 800, 600);
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-
 // ---------------------------SHADERS SET UP-----------------------------------------------
 
     unsigned int vertexShader = createVertexShader();
@@ -76,14 +72,17 @@ int main() {
 
 // ---------------------------BUFFERS SET UP-----------------------------------------------
     unsigned int VBO,VAO,EBO;
-    // triangle_setup(VAO, VBO);
-    rectangle_setup(VAO, VBO, EBO);
+    triangle_setup(&VAO, &VBO);
+    // rectangle_setup(&VAO, &VBO, &EBO);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
+    glBindBuffer(GL_ARRAY_BUFFER, 0); // Unbinds the VBO
+    glBindVertexArray(0); // Unbinds the VAO
+
     // To view Unfilled shapes
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     
     
 // ---------------------------RENDER LOOP--------------------------------------------------
@@ -92,7 +91,7 @@ int main() {
 
         // Sets the new color with which the buffer will be filled. 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        // // Clears the color buffer.
+        // Clears the color buffer.
         glClear(GL_COLOR_BUFFER_BIT);
 
         // Set correct shader, bind to needed VAO and draw triangle.
@@ -100,13 +99,14 @@ int main() {
         glBindVertexArray(VAO);
 
         // Draws a triangle.
-        // glDrawArrays(GL_TRIANGLES, 0, 3);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
 
         // Draws a rectangle.
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+        
         // Swaps buffer once back buffer ready to be rendered. 
         glfwSwapBuffers(window);
-
         // Checks for any even triggered and calls call back functions.
         glfwPollEvents(); 
     }
@@ -189,24 +189,24 @@ unsigned int activateShaderProgram(unsigned int vertexShader, unsigned int fragm
 }
 
 
-void triangle_setup(unsigned int VAO, unsigned int VBO) {
+void triangle_setup(unsigned int *VAO, unsigned int *VBO) {
     float triangle2D[] = {
         -0.5f, -0.5f, 0.0f,
         0.5f, -0.5f, 0.0f,
         0.0f,  0.5f, 0.0f
     };  
 
-    glGenVertexArrays(1, &VAO);  
-    glGenBuffers(1, &VBO);
+    glGenVertexArrays(1, VAO);  
+    glGenBuffers(1, VBO);
 
-    glBindVertexArray(VAO);
+    glBindVertexArray(*VAO);
 
     // Binding the buffer. Can bind multiple buffers as long as they are different types.
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBindBuffer(GL_ARRAY_BUFFER, *VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(triangle2D), triangle2D, GL_STATIC_DRAW);
 }
 
-void rectangle_setup(unsigned int VAO, unsigned int VBO, unsigned int EBO) {
+void rectangle_setup(unsigned int *VAO, unsigned int *VBO, unsigned int *EBO) {
     float rectangle2D[] = {
         0.5f,  0.5f, 0.0f,  // top right
         0.5f, -0.5f, 0.0f,  // bottom right
@@ -218,15 +218,15 @@ void rectangle_setup(unsigned int VAO, unsigned int VBO, unsigned int EBO) {
         1, 2, 3    // second triangle
     };
 
-    glGenVertexArrays(1, &VAO);  
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
+    glGenVertexArrays(1, VAO);  
+    glGenBuffers(1, VBO);
+    glGenBuffers(1, EBO);
 
-    glBindVertexArray(VAO);
+    glBindVertexArray(*VAO);
 
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBindBuffer(GL_ARRAY_BUFFER, *VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(rectangle2D), rectangle2D, GL_STATIC_DRAW);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(rectangleIndices), rectangleIndices, GL_STATIC_DRAW);
 }
