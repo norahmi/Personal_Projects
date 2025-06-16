@@ -1,7 +1,8 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include "Shader.h"
-#include "ShapeType.h"
+#include "shapes_utils/ShapeType.h"
+#include <stb_image.h>
 
 #include <iostream>
 #include <cmath>
@@ -27,6 +28,7 @@ void setUniformColor(int shaderProgram);
  *        Moves to the right with packman effect.
  */
 void setUniformPosition (int shaderProgram, int *counter, float *offset);
+unsigned int createTexture(const char* imagePath, GLenum format);
 
 
 // Vertex Shader. 3D Vector that gets transformed into 4D Vector. 
@@ -55,6 +57,7 @@ const char *fragmentShaderSource = "#version 330 core\n"
 
 int main() {
 // ---------------------------GENERAL SET UP-----------------------------------------------
+
     glfwInit();
     // Means we are using GLFW 3.3
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -88,26 +91,39 @@ int main() {
     Shader myshader("../shaders/basic-vertex.vs", "../shaders/basic-fragment.fs");
 
 // ---------------------------BUFFERS SET UP-----------------------------------------------
-    unsigned int VBO,VAO,EBO;
-    triangleSetup(&VAO, &VBO);
-    // rectangleSetup(&VAO, &VBO, &EBO);
 
-    // Position attribute.
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    unsigned int VBO,VAO,EBO;
+    // triangleSetup(&VAO, &VBO);
+    rectangleSetup(&VAO, &VBO, &EBO);
+
+    // Position (3 x 4 bytes) attribute.
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    // Color attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3* sizeof(float)));
+    // Color (3 x 4 bytes) attribute.
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3* sizeof(float)));
     glEnableVertexAttribArray(1);
 
-    glBindBuffer(GL_ARRAY_BUFFER, 0); // Unbinds the VBO
-    glBindVertexArray(0); // Unbinds the VAO
+    // Texture (2 x 4 bytes) attribute.
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2); 
 
     // To view Unfilled shapes
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+// ---------------------------TEXTURE SET UP-----------------------------------------------
+
+    stbi_set_flip_vertically_on_load(true);
+    unsigned int texture1 = createTexture("../images/wood_container.jpg", GL_RGB);
+    unsigned int texture2 = createTexture("../images/awesomeface.png", GL_RGBA);
+
     
-    
-// ---------------------------RENDER LOOP--------------------------------------------------
+    myshader.use();
+    glUniform1i(glGetUniformLocation(myshader.ID, "texture1"), 0);
+    // or set it via the texture class
+    myshader.setInt("texture2", 1);
+
+    // ---------------------------RENDER LOOP--------------------------------------------------
     int counter = 0;
     float offset = 0;
     while (!glfwWindowShouldClose(window)) {
@@ -118,18 +134,25 @@ int main() {
         // Clears the color buffer.
         glClear(GL_COLOR_BUFFER_BIT);
 
+        // Bind existing texture.
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture1);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, texture2);
+
         // glUseProgram(shaderProgram);
         myshader.use();
         
-        setUniformPosition(myshader.ID, &counter, &offset);
-        setUniformColor(myshader.ID);
+        // setUniformPosition(myshader.ID, &counter, &offset);
+        // setUniformColor(myshader.ID);
         
         glBindVertexArray(VAO);
 
         // Draws a triangle.
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        // glDrawArrays(GL_TRIANGLES, 0, 3);
+
         // Draws a rectangle.
-        // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         
         // Swaps buffer once back buffer ready to be rendered. 
         glfwSwapBuffers(window);
@@ -146,6 +169,9 @@ int main() {
     glfwTerminate();
     return 0;
 }
+
+
+
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
@@ -221,7 +247,7 @@ void triangleSetup(unsigned int *VAO, unsigned int *VBO) {
     // std::vector<float> triangle2D = getShapeVertices(ShapeType::Triangle); 
 
     // Positions and Colors.
-    std::vector<float> triangle2D = getShapeVertices(ShapeType::ColoredTriangle);
+    std::vector<float> triangle2D = getShapeVertices(ShapeType::TriangleColor);
 
     // Upside down triangle.
     // std::vector<float> triangle2D = getShapeVertices(ShapeType::UpsideDownTriangle);
@@ -237,7 +263,12 @@ void triangleSetup(unsigned int *VAO, unsigned int *VBO) {
 }
 
 void rectangleSetup(unsigned int *VAO, unsigned int *VBO, unsigned int *EBO) {
-    std::vector<float> rectangle2D = getShapeVertices(ShapeType::Rectangle);
+    // Colored Rectangle.
+    // std::vector<float> rectangle2D = getShapeVertices(ShapeType::RectangleColor);
+
+    // Color and Texture Rectangle. 
+    std::vector<float> rectangle2D = getShapeVertices(ShapeType::RectangleColorTexture);
+
     unsigned int rectangleIndices[] = {  // note that we start from 0!
         0, 1, 3,   // first triangle
         1, 2, 3    // second triangle
@@ -276,4 +307,35 @@ void setUniformPosition (int shaderProgram, int *counter, float *offset) {
         glUniform1f(offsetLocation, *offset);
     }
     (*counter)++;
+}
+
+
+
+unsigned int createTexture(const char* imagePath, GLenum format) {
+    // OpenGL object. 1 is the number of textures we want to generate.
+    unsigned int texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    
+    // set the texture wrapping/filtering options (on the currently bound texture object)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    
+    int width, height, nrChannels;
+    // Load picture from images with stbi library.
+    unsigned char *data = stbi_load(imagePath, &width, &height, &nrChannels, 0); 
+    if (data) {
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        // Generates all the needed mipmaps so that we do not have to do it manually.
+        glGenerateMipmap(GL_TEXTURE_2D);
+        std::cout << "INFO::WIDTH::" << width << "::HEIGHT::" << height << std::endl;
+
+    } else {
+        std::cout << "ERROR::TEXTURE::Failed to load" << std::endl;
+    }
+    stbi_image_free(data); // free memory.
+
+    return texture;
 }
