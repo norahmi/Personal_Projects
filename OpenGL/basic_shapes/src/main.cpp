@@ -267,7 +267,7 @@ void setUniformColor (int shaderProgram) {
 }
 
 void setUniformPosition (int shaderProgram, int *counter, float *offset) {
-    if (*counter % 100 == 0) {
+    if (*counter % 10 == 0) {
         *offset += 0.1f;
         if (*offset > 1.5f) {
             *offset = -1.5f;

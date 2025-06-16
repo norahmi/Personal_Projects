@@ -6,6 +6,6 @@ uniform float offset;
 
 
 void main(){
-    gl_Position = vec4(aPos.x + offset, aPos.y, aPos.z , 1.0);
-    vertexColor = aColor;
+    gl_Position = vec4(aPos.x + offset, aPos.y + offset, aPos.z , 1.0);
+    vertexColor = aPos + offset;
 }
