@@ -1,7 +1,9 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include "shader.h"
 
 #include <iostream>
+#include <cmath>
 
 // Resize callback
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -23,17 +25,22 @@ void rectangle_setup(unsigned int *VAO, unsigned int *VBO, unsigned int *EBO);
 // Vertex Shader. 3D Vector that gets transformed into 4D Vector. 
 const char *vertexShaderSource = "#version 330 core\n"
     "layout (location = 0) in vec3 aPos;\n"
+    "layout (location = 1) in vec3 aColor;\n"
+    "out vec3 vertexColor;\n"
     "void main()\n"
     "{\n"
-    "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+    "   gl_Position = vec4(aPos, 1.0);\n"
+    "   vertexColor = aColor;\n"
     "}\0";
 
 // Fragment Shader. 4D vector for color. RGBA where "A" is for alpha (opacity).
 const char *fragmentShaderSource = "#version 330 core\n"
     "out vec4 FragColor;\n"
+    "in vec3 vertexColor;\n"
+    "uniform vec4 ourColor;\n"
     "void main()\n"
     "{\n"
-    "FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
+    "   FragColor = vec4(vertexColor, 1.0);\n"
     "}\0";
 
 
@@ -66,17 +73,25 @@ int main() {
     
 // ---------------------------SHADERS SET UP-----------------------------------------------
 
-    unsigned int vertexShader = createVertexShader();
-    unsigned int fragmentShader = createFragmentShader();
-    unsigned int shaderProgram = activateShaderProgram(vertexShader, fragmentShader);
+    // unsigned int vertexShader = createVertexShader();
+    // unsigned int fragmentShader = createFragmentShader();
+    // unsigned int shaderProgram = activateShaderProgram(vertexShader, fragmentShader);
+
+    // Use Costume shader class instead.
+    Shader myshader("../shaders/basic-vertex.vs", "../shaders/basic-fragment.fs");
 
 // ---------------------------BUFFERS SET UP-----------------------------------------------
     unsigned int VBO,VAO,EBO;
     triangle_setup(&VAO, &VBO);
     // rectangle_setup(&VAO, &VBO, &EBO);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    // Position attribute.
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+
+    // Color attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3* sizeof(float)));
+    glEnableVertexAttribArray(1);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0); // Unbinds the VBO
     glBindVertexArray(0); // Unbinds the VAO
@@ -94,10 +109,18 @@ int main() {
         // Clears the color buffer.
         glClear(GL_COLOR_BUFFER_BIT);
 
-        // Set correct shader, bind to needed VAO and draw triangle.
-        glUseProgram(shaderProgram);
-        glBindVertexArray(VAO);
+        // glUseProgram(shaderProgram);
+        myshader.use();
 
+        // Set uniform dynamically.
+        // float timeValue = glfwGetTime();
+        // float greenValue = (sin(timeValue) / 2.0f) + 0.5f;
+        // float redValue = (cos(timeValue) / 2.0f) + 0.7f;
+        // float blueValue = (tan(timeValue) / 2.0f) + 0.6f;
+        // int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");
+        // glUniform4f(vertexColorLocation, redValue, greenValue, blueValue, 1.0f);
+        
+        glBindVertexArray(VAO);
         // Draws a triangle.
         glDrawArrays(GL_TRIANGLES, 0, 3);
 
@@ -115,7 +138,8 @@ int main() {
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &EBO);
-    glDeleteProgram(shaderProgram);
+    // glDeleteProgram(shaderProgram);
+
     glfwTerminate();
     return 0;
 }
@@ -190,12 +214,18 @@ unsigned int activateShaderProgram(unsigned int vertexShader, unsigned int fragm
 
 
 void triangle_setup(unsigned int *VAO, unsigned int *VBO) {
-    float triangle2D[] = {
-        -0.5f, -0.5f, 0.0f,
-        0.5f, -0.5f, 0.0f,
-        0.0f,  0.5f, 0.0f
-    };  
+    // float triangle2D[] = {
+    //     -0.5f, -0.5f, 0.0f,
+    //     0.5f, -0.5f, 0.0f,
+    //     0.0f,  0.5f, 0.0f
+    // };  
 
+    float triangle2D[] = {
+        // positions         // colors
+        0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // bottom right
+        -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // bottom left
+        0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f    // top 
+    }; 
     glGenVertexArrays(1, VAO);  
     glGenBuffers(1, VBO);
 
