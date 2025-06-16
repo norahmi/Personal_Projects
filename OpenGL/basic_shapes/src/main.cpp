@@ -1,6 +1,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include "shader.h"
+#include "Shader.h"
+#include "ShapeType.h"
 
 #include <iostream>
 #include <cmath>
@@ -16,10 +17,16 @@ unsigned int createFragmentShader();
 // Create and activate shader program object.
 unsigned int activateShaderProgram(unsigned int vertexShader, unsigned int fragmentShader);
 // Prepare buffers for triangle.
-void triangle_setup(unsigned int *VAO, unsigned int *VBO);
+void triangleSetup(unsigned int *VAO, unsigned int *VBO);
 // Prepare buffers for rectangle.
-void rectangle_setup(unsigned int *VAO, unsigned int *VBO, unsigned int *EBO);
-
+void rectangleSetup(unsigned int *VAO, unsigned int *VBO, unsigned int *EBO);
+// Set uniform dynamically for color.
+void setUniformColor(int shaderProgram);
+/**
+ * @brief Set uniform dynamically for position.
+ *        Moves to the right with packman effect.
+ */
+void setUniformPosition (int shaderProgram, int *counter, float *offset);
 
 
 // Vertex Shader. 3D Vector that gets transformed into 4D Vector. 
@@ -82,8 +89,8 @@ int main() {
 
 // ---------------------------BUFFERS SET UP-----------------------------------------------
     unsigned int VBO,VAO,EBO;
-    triangle_setup(&VAO, &VBO);
-    // rectangle_setup(&VAO, &VBO, &EBO);
+    triangleSetup(&VAO, &VBO);
+    // rectangleSetup(&VAO, &VBO, &EBO);
 
     // Position attribute.
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
@@ -101,6 +108,8 @@ int main() {
     
     
 // ---------------------------RENDER LOOP--------------------------------------------------
+    int counter = 0;
+    float offset = 0;
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
 
@@ -111,22 +120,16 @@ int main() {
 
         // glUseProgram(shaderProgram);
         myshader.use();
-
-        // Set uniform dynamically.
-        // float timeValue = glfwGetTime();
-        // float greenValue = (sin(timeValue) / 2.0f) + 0.5f;
-        // float redValue = (cos(timeValue) / 2.0f) + 0.7f;
-        // float blueValue = (tan(timeValue) / 2.0f) + 0.6f;
-        // int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");
-        // glUniform4f(vertexColorLocation, redValue, greenValue, blueValue, 1.0f);
+        
+        setUniformPosition(myshader.ID, &counter, &offset);
+        setUniformColor(myshader.ID);
         
         glBindVertexArray(VAO);
+
         // Draws a triangle.
         glDrawArrays(GL_TRIANGLES, 0, 3);
-
         // Draws a rectangle.
         // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
         
         // Swaps buffer once back buffer ready to be rendered. 
         glfwSwapBuffers(window);
@@ -213,19 +216,16 @@ unsigned int activateShaderProgram(unsigned int vertexShader, unsigned int fragm
 }
 
 
-void triangle_setup(unsigned int *VAO, unsigned int *VBO) {
-    // float triangle2D[] = {
-    //     -0.5f, -0.5f, 0.0f,
-    //     0.5f, -0.5f, 0.0f,
-    //     0.0f,  0.5f, 0.0f
-    // };  
+void triangleSetup(unsigned int *VAO, unsigned int *VBO) {
+    // Only Positions.
+    // std::vector<float> triangle2D = getShapeVertices(ShapeType::Triangle); 
 
-    float triangle2D[] = {
-        // positions         // colors
-        0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // bottom right
-        -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // bottom left
-        0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f    // top 
-    }; 
+    // Positions and Colors.
+    std::vector<float> triangle2D = getShapeVertices(ShapeType::ColoredTriangle);
+
+    // Upside down triangle.
+    // std::vector<float> triangle2D = getShapeVertices(ShapeType::UpsideDownTriangle);
+
     glGenVertexArrays(1, VAO);  
     glGenBuffers(1, VBO);
 
@@ -233,16 +233,11 @@ void triangle_setup(unsigned int *VAO, unsigned int *VBO) {
 
     // Binding the buffer. Can bind multiple buffers as long as they are different types.
     glBindBuffer(GL_ARRAY_BUFFER, *VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(triangle2D), triangle2D, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, triangle2D.size() * sizeof(float), triangle2D.data(), GL_STATIC_DRAW);
 }
 
-void rectangle_setup(unsigned int *VAO, unsigned int *VBO, unsigned int *EBO) {
-    float rectangle2D[] = {
-        0.5f,  0.5f, 0.0f,  // top right
-        0.5f, -0.5f, 0.0f,  // bottom right
-        -0.5f, -0.5f, 0.0f,  // bottom left
-        -0.5f,  0.5f, 0.0f   // top left 
-    };
+void rectangleSetup(unsigned int *VAO, unsigned int *VBO, unsigned int *EBO) {
+    std::vector<float> rectangle2D = getShapeVertices(ShapeType::Rectangle);
     unsigned int rectangleIndices[] = {  // note that we start from 0!
         0, 1, 3,   // first triangle
         1, 2, 3    // second triangle
@@ -255,8 +250,30 @@ void rectangle_setup(unsigned int *VAO, unsigned int *VBO, unsigned int *EBO) {
     glBindVertexArray(*VAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, *VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(rectangle2D), rectangle2D, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, rectangle2D.size() * sizeof(float), rectangle2D.data(), GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(rectangleIndices), rectangleIndices, GL_STATIC_DRAW);
+}
+
+
+void setUniformColor (int shaderProgram) {
+    float timeValue = glfwGetTime();
+    float greenValue = (sin(timeValue) / 2.0f) + 0.5f;
+    float redValue = (cos(timeValue) / 2.0f) + 0.7f;
+    float blueValue = (tan(timeValue) / 2.0f) + 0.6f;
+    int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");
+    glUniform4f(vertexColorLocation, redValue, greenValue, blueValue, 1.0f);
+}
+
+void setUniformPosition (int shaderProgram, int *counter, float *offset) {
+    if (*counter % 100 == 0) {
+        *offset += 0.1f;
+        if (*offset > 1.5f) {
+            *offset = -1.5f;
+        }
+        int offsetLocation = glGetUniformLocation(shaderProgram, "offset");
+        glUniform1f(offsetLocation, *offset);
+    }
+    (*counter)++;
 }
