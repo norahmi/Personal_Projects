@@ -4,6 +4,10 @@
 #include "shapes_utils/ShapeType.h"
 #include <stb_image.h>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include <iostream>
 #include <cmath>
 
@@ -28,7 +32,10 @@ void setUniformColor(int shaderProgram);
  *        Moves to the right with packman effect.
  */
 void setUniformPosition (int shaderProgram, int *counter, float *offset);
+// Create New Texture
 unsigned int createTexture(const char* imagePath, GLenum format);
+// Function called in the render loop
+void render_loop_func(Shader myshader, GLFWwindow *window, int* counter, float* offset,unsigned int* VAO, unsigned int* text1, unsigned int* text2);
 
 
 // Vertex Shader. 3D Vector that gets transformed into 4D Vector. 
@@ -97,16 +104,24 @@ int main() {
     rectangleSetup(&VAO, &VBO, &EBO);
 
     // Position (3 x 4 bytes) attribute.
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    // glEnableVertexAttribArray(0);
+
+    // // Color (3 x 4 bytes) attribute.
+    // glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3* sizeof(float)));
+    // glEnableVertexAttribArray(1);
+
+    // // Texture (2 x 4 bytes) attribute.
+    // glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    // glEnableVertexAttribArray(2); 
+
+    // Position + Texture
+    // position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-
-    // Color (3 x 4 bytes) attribute.
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3* sizeof(float)));
+    // texture coord attribute
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
-
-    // Texture (2 x 4 bytes) attribute.
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(2); 
 
     // To view Unfilled shapes
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -127,37 +142,7 @@ int main() {
     int counter = 0;
     float offset = 0;
     while (!glfwWindowShouldClose(window)) {
-        processInput(window);
-
-        // Sets the new color with which the buffer will be filled. 
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        // Clears the color buffer.
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        // Bind existing texture.
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture1);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, texture2);
-
-        // glUseProgram(shaderProgram);
-        myshader.use();
-        
-        // setUniformPosition(myshader.ID, &counter, &offset);
-        // setUniformColor(myshader.ID);
-        
-        glBindVertexArray(VAO);
-
-        // Draws a triangle.
-        // glDrawArrays(GL_TRIANGLES, 0, 3);
-
-        // Draws a rectangle.
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        
-        // Swaps buffer once back buffer ready to be rendered. 
-        glfwSwapBuffers(window);
-        // Checks for any even triggered and calls call back functions.
-        glfwPollEvents(); 
+        render_loop_func(myshader, window, &counter, &offset, &VAO, &texture1, &texture2);
     }
 
 // ---------------------------CLEAN UP & TERMINATION---------------------------------------
@@ -171,7 +156,48 @@ int main() {
 }
 
 
+void render_loop_func(Shader myshader, GLFWwindow *window, int* counter, float* offset,unsigned int* VAO, unsigned int* text1, unsigned int* text2) {
+    processInput(window);
+    // Sets the new color with which the buffer will be filled. 
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    // Clears the color buffer.
+    glClear(GL_COLOR_BUFFER_BIT);
 
+    // Bind existing texture.
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, *text1);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, *text2);
+
+    // Creates an identity matrix.
+    // Memento: it is a 4x4 matrix because you need to be able to modify the z too.
+    glm::mat4 trans = glm::mat4(1.0f);
+
+    // In realty first you do the rotation and then the translation
+    trans = glm::translate(trans, glm::vec3(0.5f, -0.5f, 0.0f));
+    trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+
+    // glUseProgram(shaderProgram);
+    myshader.use();
+    
+    // setUniformPosition(myshader.ID, counter, offset);
+    // setUniformColor(myshader.ID);
+    unsigned int transformLoc = glGetUniformLocation(myshader.ID, "transform");
+    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+    
+    glBindVertexArray(*VAO);
+
+    // Draws a triangle.
+    // glDrawArrays(GL_TRIANGLES, 0, 3);
+
+    // Draws a rectangle.
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    
+    // Swaps buffer once back buffer ready to be rendered. 
+    glfwSwapBuffers(window);
+    // Checks for any even triggered and calls call back functions.
+    glfwPollEvents(); 
+}
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
@@ -241,7 +267,6 @@ unsigned int activateShaderProgram(unsigned int vertexShader, unsigned int fragm
     return shaderProgram;
 }
 
-
 void triangleSetup(unsigned int *VAO, unsigned int *VBO) {
     // Only Positions.
     // std::vector<float> triangle2D = getShapeVertices(ShapeType::Triangle); 
@@ -267,7 +292,10 @@ void rectangleSetup(unsigned int *VAO, unsigned int *VBO, unsigned int *EBO) {
     // std::vector<float> rectangle2D = getShapeVertices(ShapeType::RectangleColor);
 
     // Color and Texture Rectangle. 
-    std::vector<float> rectangle2D = getShapeVertices(ShapeType::RectangleColorTexture);
+    // std::vector<float> rectangle2D = getShapeVertices(ShapeType::RectangleColorTexture);
+
+    // Textured Rectangle.
+    std::vector<float> rectangle2D = getShapeVertices(ShapeType::RectangleTexture);
 
     unsigned int rectangleIndices[] = {  // note that we start from 0!
         0, 1, 3,   // first triangle
@@ -286,7 +314,6 @@ void rectangleSetup(unsigned int *VAO, unsigned int *VBO, unsigned int *EBO) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(rectangleIndices), rectangleIndices, GL_STATIC_DRAW);
 }
-
 
 void setUniformColor (int shaderProgram) {
     float timeValue = glfwGetTime();
@@ -308,8 +335,6 @@ void setUniformPosition (int shaderProgram, int *counter, float *offset) {
     }
     (*counter)++;
 }
-
-
 
 unsigned int createTexture(const char* imagePath, GLenum format) {
     // OpenGL object. 1 is the number of textures we want to generate.

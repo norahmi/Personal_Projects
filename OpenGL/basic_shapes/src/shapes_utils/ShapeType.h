@@ -9,6 +9,7 @@ enum class ShapeType {
     UpsideDownTriangle,
     Rectangle,
     RectangleColor,
+    RectangleTexture,
     RectangleColorTexture
 };
 

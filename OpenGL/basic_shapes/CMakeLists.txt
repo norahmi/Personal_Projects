@@ -17,7 +17,7 @@ include_directories(include)
 add_library(glad src/glad.c)
 
 # Optional: add GLM if used
-include_directories(libs/glm)
+include_directories(include/glm)
 
 add_executable(OpenGLBasic 
     src/main.cpp
